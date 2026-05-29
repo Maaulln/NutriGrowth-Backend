@@ -14,7 +14,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::orderBy('created_at', 'desc')->get(['id', 'name', 'email', 'created_at', 'updated_at']);
+        $users = User::orderBy('created_at', 'desc')->get(['id', 'name', 'email', 'role', 'created_at', 'updated_at']);
         return response()->json([
             'data'  => $users,
             'total' => $users->count(),
@@ -48,7 +48,7 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'User berhasil ditambahkan!',
-            'data'    => $user->only(['id', 'name', 'email', 'created_at', 'updated_at']),
+            'data'    => $user->only(['id', 'name', 'email', 'role', 'created_at', 'updated_at']),
         ], 201);
     }
 
@@ -64,7 +64,7 @@ class UserController extends Controller
             return response()->json(['error' => 'User tidak ditemukan.'], 404);
         }
 
-        return response()->json(['data' => $user->only(['id', 'name', 'email', 'created_at', 'updated_at'])]);
+        return response()->json(['data' => $user->only(['id', 'name', 'email', 'role', 'created_at', 'updated_at'])]);
     }
 
     /**
@@ -95,7 +95,7 @@ class UserController extends Controller
 
         return response()->json([
             'message' => 'Data user berhasil diperbarui.',
-            'data'    => $user->fresh()->only(['id', 'name', 'email', 'created_at', 'updated_at']),
+            'data'    => $user->fresh()->only(['id', 'name', 'email', 'role', 'created_at', 'updated_at']),
         ]);
     }
 

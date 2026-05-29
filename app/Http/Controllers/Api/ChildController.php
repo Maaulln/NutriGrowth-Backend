@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Auth;
 class ChildController extends Controller
 {
     /**
-     * Display a listing of the children for the authenticated user.
+     * GET /api/children
+     * Mengambil semua data anak milik user yang sedang login.
+     * Data diurutkan dari yang terbaru. Hanya anak milik user sendiri yang ditampilkan.
      */
     public function index()
     {
@@ -24,7 +26,10 @@ class ChildController extends Controller
     }
 
     /**
-     * Store a newly created child in storage.
+     * POST /api/children
+     * Menyimpan data anak baru milik user yang sedang login.
+     * Field wajib: name, gender (male/female), birth_date.
+     * Field opsional: weight_kg, height_cm, muac_cm (lingkar lengan atas).
      */
     public function store(Request $request)
     {
@@ -47,7 +52,9 @@ class ChildController extends Controller
     }
 
     /**
-     * Display the specified child.
+     * GET /api/children/{id}
+     * Menampilkan detail satu data anak berdasarkan ID.
+     * Hanya bisa mengakses anak milik user sendiri — jika bukan miliknya, dikembalikan 404.
      */
     public function show($id)
     {
@@ -68,7 +75,10 @@ class ChildController extends Controller
     }
 
     /**
-     * Update the specified child in storage.
+     * PUT/PATCH /api/children/{id}
+     * Memperbarui data anak berdasarkan ID.
+     * Semua field bersifat opsional (pakai 'sometimes'), hanya field yang dikirim yang diubah.
+     * Hanya bisa mengubah anak milik user sendiri.
      */
     public function update(Request $request, $id)
     {
@@ -100,7 +110,9 @@ class ChildController extends Controller
     }
 
     /**
-     * Remove the specified child from storage.
+     * DELETE /api/children/{id}
+     * Menghapus data anak berdasarkan ID secara permanen.
+     * Hanya bisa menghapus anak milik user sendiri.
      */
     public function destroy($id)
     {

@@ -1,0 +1,25 @@
+{
+  "version": "0.2",
+  "language": "en,id",
+  "words": [
+    "Mengambil", "Menyimpan", "Menampilkan", "Memperbarui", "Menghapus",
+    "semua", "anak", "milik", "baru", "sedang", "sendiri", "terbaru",
+    "wajib", "opsional", "berdasarkan", "kategori", "dikirim", "diubah",
+    "jika", "bukan", "miliknya", "dikembalikan", "bersifat", "hanya",
+    "mengakses", "mengubah", "menghapus", "secara", "permanen",
+    "makanan", "nutrisinya", "informasi", "beserta", "daftar",
+    "terbuka", "untuk", "umum", "tidak", "memerlukan", "autentikasi",
+    "pencarian", "sebagian", "kata", "diurutkan", "dari", "ditampilkan",
+    "Mendukung", "Hanya", "bisa", "Semua", "pakai", "Cari",
+    "muac", "lingkar", "lengan", "atas", "satu", "termasuk",
+    "berhasil", "diambil", "ditambahkan", "dihapus", "diperbarui",
+    "orang", "tua", "login", "logout", "registrasi",
+    "sanctum", "Sanctum", "nutriGrowth", "NutriGrowth"
+  ],
+  "ignorePaths": [
+    "vendor/**",
+    "node_modules/**",
+    "storage/**",
+    "*.lock"
+  ]
+}

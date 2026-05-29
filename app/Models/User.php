@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -42,11 +43,20 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
     /**
      * Get the children for the user.
      */
     public function children()
     {
         return $this->hasMany(Child::class);
+    }
+
+    /**
+     * Get the meal plans created for the user.
+     */
+    public function mealPlans()
+    {
+        return $this->hasMany(MealPlan::class);
     }
 }

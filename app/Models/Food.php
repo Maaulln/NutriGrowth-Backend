@@ -28,10 +28,17 @@ class Food extends Model
         'protein',
         'fat',
         'carbs',
+        'fiber_g',
         'price_per_serving',
+        'price_min',
+        'price_max',
         'serving_size',
+        'serving_size_g',
         'description',
         'image_url',
+        'allergens',
+        'age_min_months',
+        'texture',
     ];
 
     /**
@@ -40,10 +47,15 @@ class Food extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'calories' => 'float',
-        'protein' => 'float',
-        'fat' => 'float',
-        'carbs' => 'float',
+        'calories'        => 'float',
+        'protein'         => 'float',
+        'fat'             => 'float',
+        'carbs'           => 'float',
+        'fiber_g'         => 'float',
+        'serving_size_g'  => 'float',
         'price_per_serving' => 'integer',
+        'price_min'       => 'integer',
+        'price_max'       => 'integer',
+        'age_min_months'  => 'integer',
     ];
 }

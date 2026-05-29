@@ -1,66 +1,146 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# NutriGrowth Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+REST API server untuk aplikasi NutriGrowth — platform pemantauan gizi dan pertumbuhan anak. Dibangun dengan **Laravel 10** dan menggunakan **Supabase (PostgreSQL)** sebagai database.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Tech Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Layer       | Teknologi               |
+| ----------- | ----------------------- |
+| Framework   | Laravel 10              |
+| Language    | PHP 8.1+                |
+| Database    | Supabase (PostgreSQL)   |
+| Auth        | Laravel Sanctum (token) |
+| HTTP Client | Guzzle                  |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Prasyarat
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- PHP >= 8.1
+- Composer
+- Akun [Supabase](https://supabase.com) (untuk database)
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Setup
 
-## Laravel Sponsors
+### 1. Install dependencies
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+composer install
+```
 
-### Premium Partners
+### 2. Salin dan konfigurasi `.env`
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-## Contributing
+Edit `.env` dan isi variabel Supabase:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```env
+APP_NAME=NutriGrowth
+APP_ENV=local
+APP_URL=http://localhost:8080
 
-## Code of Conduct
+DB_CONNECTION=pgsql
+DATABASE_URL=postgresql://postgres.<project-ref>:<your-supabase-db-password>@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Supabase client vars (opsional, bila ada frontend/mobile yang memakai project ini)
+# NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+# NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-supabase-publishable-key>
 
-## Security Vulnerabilities
+# Gunakan Supabase Pooler (Transaction mode) untuk production
+# DATABASE_URL=postgresql://postgres.<project-ref>:<your-supabase-db-password>@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+> Kredensial Supabase tersedia di: **Supabase Dashboard → Project Settings → Database → Connection string**
 
-## License
+### 3. Jalankan migrasi dan seeder
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan migrate
+php artisan db:seed
+```
+
+### 4. Jalankan server
+
+```bash
+php artisan serve --port=8080
+```
+
+---
+
+## API Endpoints
+
+### Auth
+
+| Method | Endpoint             | Auth   | Deskripsi                   |
+| ------ | -------------------- | ------ | --------------------------- |
+| POST   | `/api/auth/register` | Tidak  | Daftar akun baru            |
+| POST   | `/api/auth/login`    | Tidak  | Login, returns Bearer token |
+| POST   | `/api/auth/logout`   | Bearer | Revoke token                |
+| GET    | `/api/auth/me`       | Bearer | Data user aktif             |
+
+### Children
+
+| Method | Endpoint             | Auth   | Deskripsi            |
+| ------ | -------------------- | ------ | -------------------- |
+| GET    | `/api/children`      | Bearer | List anak milik user |
+| POST   | `/api/children`      | Bearer | Tambah data anak     |
+| GET    | `/api/children/{id}` | Bearer | Detail anak          |
+| PUT    | `/api/children/{id}` | Bearer | Update data anak     |
+| DELETE | `/api/children/{id}` | Bearer | Hapus data anak      |
+
+### Foods
+
+| Method | Endpoint          | Auth  | Deskripsi          |
+| ------ | ----------------- | ----- | ------------------ |
+| GET    | `/api/foods`      | Tidak | List semua makanan |
+| GET    | `/api/foods/{id}` | Tidak | Detail makanan     |
+
+### Users (Admin)
+
+| Method | Endpoint          | Auth  | Deskripsi       |
+| ------ | ----------------- | ----- | --------------- |
+| GET    | `/api/users`      | Tidak | List semua user |
+| POST   | `/api/users`      | Tidak | Buat user baru  |
+| PUT    | `/api/users/{id}` | Tidak | Update user     |
+| DELETE | `/api/users/{id}` | Tidak | Hapus user      |
+
+### Waitlist
+
+| Method | Endpoint        | Auth  | Deskripsi       |
+| ------ | --------------- | ----- | --------------- |
+| POST   | `/api/waitlist` | Tidak | Daftar waitlist |
+
+---
+
+## Database Schema
+
+```text
+users           — id, name, email, password, timestamps
+├── children    — id, user_id, name, gender, birth_date, image_url,
+│                 weight_kg, height_cm, muac_cm, timestamps
+waitlists       — id, name, email, timestamps
+foods           — id, name, category, calories, protein, fat, carbs,
+                  price_per_serving, serving_size, description, image_url, timestamps
+personal_access_tokens — (Sanctum)
+```
+
+---
+
+## Migrasi ke Supabase
+
+Supabase menggunakan PostgreSQL. Tidak ada perubahan kode karena Eloquent mendukung PostgreSQL secara native — cukup ganti nilai `DB_*` di `.env`.
+
+Jika sebelumnya menggunakan MySQL lokal, ekspor data dulu lalu import ke Supabase via **SQL Editor** di dashboard Supabase.
+
+---
+
+## CORS
+
+Konfigurasi CORS ada di [`config/cors.php`](config/cors.php). Secara default semua origin diizinkan untuk development. Atur `allowed_origins` saat deployment ke production.

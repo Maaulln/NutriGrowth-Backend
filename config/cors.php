@@ -19,7 +19,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => [
+        'http://localhost:8000',  // NutriGrowth-WebClient
+        'http://localhost:8001',  // NutriGrowth-Admin
+        'http://localhost:5173',  // NutriGrowth-Web (React/Vite)
+    ],
 
     'allowed_origins_patterns' => [],
 
