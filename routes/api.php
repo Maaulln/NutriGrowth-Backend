@@ -26,16 +26,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('me',      [AuthController::class, 'me']);
     });
 
-    // POST /api/analyze → analisis gizi anak (stunting + rekomendasi makanan dari DB)
+    // POST /api/analyze       → analisis gizi anak (stunting + rekomendasi makanan dari DB)
+    // GET  /api/analyses      → riwayat analisis user (opsional: ?child_id=X)
     Route::post('analyze', [AnalysisController::class, 'analyze']);
+    Route::get('analyses',  [AnalysisController::class, 'index']);
 
     // CRUD data anak — hanya bisa mengakses anak milik sendiri
-    // GET    /api/children          → daftar semua anak milik user
-    // POST   /api/children          → tambah anak baru
-    // GET    /api/children/{id}     → detail satu anak
-    // PUT    /api/children/{id}     → update data anak
-    // DELETE /api/children/{id}     → hapus data anak
+    // GET    /api/children                        → daftar semua anak milik user
+    // POST   /api/children                        → tambah anak baru
+    // GET    /api/children/{id}                   → detail satu anak
+    // PUT    /api/children/{id}                   → update data anak
+    // DELETE /api/children/{id}                   → hapus data anak
+    // GET    /api/children/{id}/assessments        → riwayat assessment untuk anak
+    // GET    /api/children/{id}/growth-records     → riwayat tumbuh kembang anak
     Route::apiResource('children', ChildController::class);
+    Route::get('children/{childId}/assessments',    [AnalysisController::class, 'childAssessments']);
+    Route::get('children/{childId}/growth-records', [ChildController::class, 'growthRecords']);
 });
 
 // ── Route admin (memerlukan token) ───────────────────────────────────────────

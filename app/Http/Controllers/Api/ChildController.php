@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Child;
+use App\Models\ChildGrowthRecord;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -130,6 +132,33 @@ class ChildController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Data anak berhasil dihapus'
+        ]);
+    }
+
+    /**
+     * GET /api/children/{childId}/growth-records
+     * Riwayat tumbuh kembang (berat, tinggi, MUAC) untuk satu anak.
+     * Diurutkan dari yang terlama agar bisa diplot sebagai grafik tren.
+     */
+    public function growthRecords(Request $request, int $childId): JsonResponse
+    {
+        $child = Auth::user()->children()->find($childId);
+
+        if (!$child) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Data anak tidak ditemukan atau Anda tidak memiliki akses',
+            ], 404);
+        }
+
+        $records = ChildGrowthRecord::where('child_id', $childId)
+            ->orderBy('recorded_at', 'asc')
+            ->limit(6)
+            ->get(['id', 'recorded_at', 'weight_kg', 'height_cm', 'muac_cm']);
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $records,
         ]);
     }
 }

@@ -86,6 +86,7 @@ class AnalysisController extends Controller
             'user_id'         => $userId,
             'child_id'        => $childId,
             'payload'         => $aiPayload,
+            'status_gizi'     => $aiResult['status_gizi'] ?? null,
             'risk_level'      => $aiResult['risk_level'] ?? 'low',
             'risk_score'      => $aiResult['risk_score'] ?? 0,
             'summary'         => $aiResult['summary'] ?? '',
@@ -120,6 +121,44 @@ class AnalysisController extends Controller
             'status'  => 'success',
             'message' => 'Analisis gizi berhasil',
             'data'    => $aiResult,
+        ]);
+    }
+
+    /**
+     * GET /api/analyses?child_id={id}
+     * Riwayat semua assessment milik user yang login (opsional filter per anak).
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $query = StuntingAssessment::where('user_id', $request->user()->id)
+            ->latest()
+            ->limit(20);
+
+        if ($request->has('child_id')) {
+            $query->where('child_id', (int) $request->query('child_id'));
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $query->get(['id', 'child_id', 'status_gizi', 'risk_level', 'risk_score', 'summary', 'created_at']),
+        ]);
+    }
+
+    /**
+     * GET /api/children/{childId}/assessments
+     * Riwayat assessment untuk satu anak milik user yang login.
+     */
+    public function childAssessments(Request $request, int $childId): JsonResponse
+    {
+        $assessments = StuntingAssessment::where('user_id', $request->user()->id)
+            ->where('child_id', $childId)
+            ->latest()
+            ->limit(10)
+            ->get(['id', 'child_id', 'status_gizi', 'risk_level', 'risk_score', 'summary', 'recommendations', 'warning_flags', 'created_at']);
+
+        return response()->json([
+            'status' => 'success',
+            'data'   => $assessments,
         ]);
     }
 }

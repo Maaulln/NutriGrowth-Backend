@@ -18,6 +18,7 @@ class StuntingAssessment extends Model
         'user_id',
         'child_id',
         'payload',
+        'status_gizi',
         'risk_level',
         'risk_score',
         'summary',
