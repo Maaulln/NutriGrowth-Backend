@@ -106,7 +106,16 @@ class AnalysisController extends Controller
             'raw_response'              => $aiResult,
         ]);
 
-        foreach ($aiResult['food_items'] ?? [] as $item) {
+        // Enrich food_items dengan image_url dari DB berdasarkan nama makanan
+        $foodNames  = collect($aiResult['food_items'] ?? [])->pluck('food_name');
+        $foodImages = Food::whereIn('name', $foodNames)->pluck('image_url', 'name');
+
+        $aiResult['food_items'] = array_map(function (array $item) use ($foodImages) {
+            $item['image_url'] = $foodImages[$item['food_name']] ?? null;
+            return $item;
+        }, $aiResult['food_items'] ?? []);
+
+        foreach ($aiResult['food_items'] as $item) {
             RecommendationItem::create([
                 'recommendation_result_id' => $recResult->id,
                 'food_name'                => $item['food_name'],
