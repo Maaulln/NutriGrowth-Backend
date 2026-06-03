@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\ChildController;
 use App\Http\Controllers\Api\AnalysisController;
 use App\Http\Controllers\Api\FoodController;
+use App\Http\Controllers\Api\NotificationController;
 
 // ── Autentikasi publik (tidak perlu token) ────────────────────────────────────
 // POST /api/auth/register  → daftar akun baru, mengembalikan token
@@ -30,6 +31,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // GET  /api/analyses      → riwayat analisis user (opsional: ?child_id=X)
     Route::post('analyze', [AnalysisController::class, 'analyze']);
     Route::get('analyses',  [AnalysisController::class, 'index']);
+
+    // GET   /api/notifications          → daftar notifikasi user (+ unread_count)
+    // PATCH /api/notifications/read-all → tandai semua sudah dibaca
+    Route::get('notifications',           [NotificationController::class, 'index']);
+    Route::patch('notifications/read-all', [NotificationController::class, 'readAll']);
 
     // CRUD data anak — hanya bisa mengakses anak milik sendiri
     // GET    /api/children                        → daftar semua anak milik user

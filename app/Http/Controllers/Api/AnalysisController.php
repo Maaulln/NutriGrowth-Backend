@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppNotification;
+use App\Models\ChildGrowthRecord;
 use App\Models\Food;
 use App\Models\RecommendationItem;
 use App\Models\RecommendationRequest;
@@ -96,6 +98,17 @@ class AnalysisController extends Controller
             'status'          => 'success',
         ]);
 
+        // Auto-simpan growth record — updateOrCreate agar tidak duplikat jika 2x analisis di hari sama
+        ChildGrowthRecord::updateOrCreate(
+            ['child_id' => $childId, 'recorded_at' => now()->toDateString()],
+            [
+                'weight_kg' => $validated['weight_kg'],
+                'height_cm' => $validated['height_cm'],
+                'muac_cm'   => $validated['muac_cm'] ?? null,
+                'notes'     => 'Dicatat otomatis dari analisis gizi',
+            ]
+        );
+
         // Simpan recommendation result + items
         $recResult = RecommendationResult::create([
             'recommendation_request_id' => $recRequest->id,
@@ -126,11 +139,42 @@ class AnalysisController extends Controller
             ]);
         }
 
+        // Buat notifikasi berdasarkan hasil analisis
+        $this->createAnalysisNotification($userId, $aiResult['status_gizi'] ?? 'normal');
+
         return response()->json([
             'status'  => 'success',
             'message' => 'Analisis gizi berhasil',
             'data'    => $aiResult,
         ]);
+    }
+
+    private function createAnalysisNotification(int $userId, string $statusGizi): void
+    {
+        $statusMap = [
+            'severely stunted' => 'Sangat Pendek (Severely Stunted)',
+            'stunted'          => 'Pendek (Stunted)',
+            'normal'           => 'Normal',
+            'tinggi'           => 'Tinggi',
+        ];
+
+        $statusLabel = $statusMap[strtolower($statusGizi)] ?? $statusGizi;
+
+        if (in_array(strtolower($statusGizi), ['stunted', 'severely stunted'])) {
+            AppNotification::create([
+                'user_id' => $userId,
+                'type'    => 'stunting_alert',
+                'title'   => 'Perhatian: Risiko Stunting Terdeteksi',
+                'message' => "Hasil analisis menunjukkan status gizi anak: {$statusLabel}. Segera lihat rekomendasi makanan dan konsultasikan dengan tenaga kesehatan.",
+            ]);
+        } else {
+            AppNotification::create([
+                'user_id' => $userId,
+                'type'    => 'analysis_done',
+                'title'   => 'Hasil Analisis Gizi Tersedia',
+                'message' => "Analisis selesai. Status gizi anak: {$statusLabel}. Lihat rekomendasi makanan untuk mendukung pertumbuhan optimal.",
+            ]);
+        }
     }
 
     /**
