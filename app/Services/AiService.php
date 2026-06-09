@@ -30,21 +30,39 @@ class AiService
         ]);
 
         try {
-            $response = Http::timeout(30)->post("{$this->baseUrl}/analyze", $payload);
+            $response = Http::timeout(60)->post("{$this->baseUrl}/analyze", $payload);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('AiService: koneksi ke AI server gagal', ['error' => $e->getMessage()]);
+            throw new \RuntimeException('Layanan analisis tidak dapat dihubungi saat ini. Silakan coba beberapa saat lagi.');
         } catch (\Exception $e) {
-            Log::error('AiService: tidak dapat terhubung ke AI server', ['error' => $e->getMessage()]);
-            throw new \RuntimeException('Tidak dapat terhubung ke AI server. Pastikan server aktif.');
+            Log::error('AiService: error tidak terduga', ['error' => $e->getMessage()]);
+            throw new \RuntimeException('Terjadi kesalahan saat menghubungi layanan analisis.');
         }
 
-        if ($response->failed()) {
-            Log::error('AiService: AI server error', [
+        if ($response->serverError()) {
+            Log::error('AiService: AI server internal error', [
                 'status' => $response->status(),
                 'body'   => $response->body(),
             ]);
-            throw new \RuntimeException("AI server merespons dengan error {$response->status()}.");
+            throw new \RuntimeException('Layanan analisis mengalami gangguan internal. Silakan coba beberapa saat lagi.');
         }
 
-        return $response->json();
+        if ($response->clientError()) {
+            Log::error('AiService: request ditolak AI server', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            throw new \RuntimeException('Data yang dikirim tidak valid atau ditolak oleh layanan analisis.');
+        }
+
+        $result = $response->json();
+
+        if (!is_array($result) || !isset($result['status_gizi'])) {
+            Log::error('AiService: response tidak valid', ['body' => $response->body()]);
+            throw new \RuntimeException('Layanan analisis mengembalikan data yang tidak valid.');
+        }
+
+        return $result;
     }
 
     /**

@@ -43,4 +43,47 @@ class NotificationController extends Controller
 
         return response()->json(['status' => 'success']);
     }
+
+    /**
+     * PATCH /api/notifications/{id}/read
+     * Tandai satu notifikasi sebagai sudah dibaca.
+     */
+    public function markRead(Request $request, $id): JsonResponse
+    {
+        $notification = AppNotification::where('user_id', $request->user()->id)->find($id);
+
+        if (!$notification) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Notifikasi tidak ditemukan',
+            ], 404);
+        }
+
+        $notification->update(['is_read' => true]);
+
+        return response()->json(['status' => 'success']);
+    }
+
+    /**
+     * DELETE /api/notifications/{id}
+     * Hapus satu notifikasi milik user.
+     */
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        $notification = AppNotification::where('user_id', $request->user()->id)->find($id);
+
+        if (!$notification) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Notifikasi tidak ditemukan',
+            ], 404);
+        }
+
+        $notification->delete();
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Notifikasi berhasil dihapus',
+        ]);
+    }
 }

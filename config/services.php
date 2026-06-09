@@ -35,4 +35,8 @@ return [
         'url' => env('AI_SERVICE_URL', 'http://localhost:8000'),
     ],
 
+    'unsplash' => [
+        'access_key' => env('UNSPLASH_ACCESS_KEY'),
+    ],
+
 ];
