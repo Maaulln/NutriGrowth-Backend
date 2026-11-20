@@ -328,6 +328,6 @@ class FoodSeeder extends Seeder
             Food::create($data);
         }
 
-        $this->command->info('FoodSeeder: ' . count($foods) . ' makanan berhasil di-seed ke Supabase.');
+        $this->command->info('FoodSeeder: ' . count($foods) . ' foods seeded.');
     }
 }
