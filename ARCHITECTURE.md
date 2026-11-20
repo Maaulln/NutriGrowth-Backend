@@ -5,7 +5,7 @@
 ```
 ┌─────────────────────────────────────────────────┐
 │               Klien Eksternal                   │
-│  Flutter App (port 8080)  │  React Web (8080)   │
+│       Flutter App     │     React Web           │
 └────────────────┬───────────────────┬────────────┘
                  │ HTTP REST API     │
                  ▼                   ▼
@@ -14,16 +14,17 @@
 │              Laravel 10 / PHP 8.1               │
 │                                                 │
 │  Routes → Controllers → Models → Eloquent ORM  │
+│  Services/AiService → HTTP ke NutriGrowth AI    │
 │                                                 │
 │  Auth: Laravel Sanctum (Bearer token)           │
-└────────────────────────┬────────────────────────┘
-                         │ PostgreSQL (pgsql driver)
-                         ▼
-┌─────────────────────────────────────────────────┐
-│                  Supabase                       │
-│           PostgreSQL Database                   │
-│  (host: db.<ref>.supabase.co:5432)              │
-└─────────────────────────────────────────────────┘
+└──────────┬──────────────────────────┬───────────┘
+           │ PostgreSQL (pgsql)       │ POST /analyze
+           ▼                          ▼
+┌────────────────────────┐   ┌────────────────────┐
+│       Supabase         │   │  NutriGrowth AI    │
+│  PostgreSQL Database   │   │  FastAPI (Python)  │
+│  (db.<ref>.supabase.co)│   │  AI_SERVICE_URL    │
+└────────────────────────┘   └────────────────────┘
 ```
 
 ---
@@ -38,16 +39,26 @@ app/
 │   ├── Controllers/
 │   │   ├── AuthController.php       — register, login, logout, me
 │   │   ├── UserController.php       — CRUD user (admin)
-│   │   ├── WaitlistController.php   — submit waitlist
+│   │   ├── WaitlistController.php   — submit waitlist (publik), kelola (admin)
 │   │   └── Api/
-│   │       ├── ChildController.php  — CRUD anak (scoped per user)
-│   │       └── FoodController.php   — read-only daftar makanan
-│   └── Middleware/                  — Sanctum, CORS, dll.
+│   │       ├── AnalysisController.php     — POST /analyze, riwayat assessment
+│   │       ├── ChildController.php        — CRUD anak (scoped per user), growth records
+│   │       ├── AdminChildController.php   — data anak semua user (admin)
+│   │       ├── FoodController.php         — daftar makanan (publik), CRUD (admin)
+│   │       ├── MealPlanController.php     — CRUD rencana makan + item
+│   │       └── NotificationController.php — daftar, tandai dibaca, hapus
+│   └── Middleware/                  — Sanctum, CORS, EnsureUserIsAdmin (alias `admin`)
 ├── Models/
 │   ├── User.php                     — HasMany children, HasMany tokens
-│   ├── Child.php                    — BelongsTo user
-│   ├── Food.php                     — standalone catalog
+│   ├── Child.php                    — BelongsTo user, HasMany growth records
+│   ├── ChildGrowthRecord.php, StuntingAssessment.php
+│   ├── RecommendationRequest.php / RecommendationResult.php / RecommendationItem.php
+│   ├── MealPlan.php, MealPlanItem.php, AppNotification.php
+│   ├── Food.php                     — katalog makanan
 │   └── Waitlist.php                 — standalone
+├── Services/
+│   └── AiService.php                — HTTP client ke NutriGrowth AI (timeout 60 dtk)
+├── Console/Commands/FetchFoodImages.php — isi image_url makanan
 └── Providers/
     └── RouteServiceProvider.php     — API prefix + middleware
 ```
@@ -82,6 +93,7 @@ Request berikutnya:
 | name                    | varchar(255) |            |
 | email                   | varchar(255) | unique     |
 | password                | varchar(255) | bcrypt     |
+| role                    | varchar      | default `user`; `admin` untuk route admin |
 | created_at / updated_at | timestamp    |            |
 
 ### `children`
@@ -97,6 +109,10 @@ Request berikutnya:
 | weight_kg               | decimal(5,2) | nullable                               |
 | height_cm               | decimal(5,2) | nullable                               |
 | muac_cm                 | decimal(5,2) | nullable (Mid-Upper Arm Circumference) |
+| allergies               | json         | nullable, daftar alergi                |
+| exclusive_breastfeeding | boolean      | default true                           |
+| supplement_intake       | varchar      | regular / irregular / none (default none) |
+| illness_frequency       | varchar      | low / medium / high (default low)      |
 | created_at / updated_at | timestamp    |                                        |
 
 ### `child_growth_records`
@@ -120,7 +136,8 @@ Request berikutnya:
 | user_id                 | bigint FK    | cascade delete             |
 | child_id                | bigint FK    | nullable, null on delete   |
 | payload                 | json         | input profil user ke AI    |
-| status                  | varchar(255) | pending / success / failed |
+| status                  | varchar(255) | pending / success / error  |
+| error_message           | text         | nullable                   |
 | created_at / updated_at | timestamp    |                            |
 
 ### `recommendation_results`
@@ -133,6 +150,7 @@ Request berikutnya:
 | budget_min                | integer   | batas bawah harga      |
 | budget_max                | integer   | batas atas harga       |
 | confidence_note           | text      | alasan atau catatan AI |
+| raw_response              | json      | nullable, response AI penuh |
 | created_at / updated_at   | timestamp |                        |
 
 ### `recommendation_items`
@@ -164,6 +182,37 @@ Request berikutnya:
 | serving_size      | varchar      | default '100g'                              |
 | description       | text         | nullable                                    |
 | image_url         | varchar      | nullable                                    |
+| fiber_g           | float        | default 0 (field untuk AI)                  |
+| serving_size_g    | float        | default 100                                 |
+| price_min / price_max | integer  | default 0, rentang harga untuk AI           |
+| allergens         | varchar      | nullable                                    |
+| age_min_months    | integer      | default 0                                   |
+| texture           | varchar      | default `lembut`                            |
+
+### `stunting_assessments`
+
+| Kolom           | Tipe      | Keterangan                              |
+| --------------- | --------- | --------------------------------------- |
+| id              | bigint PK |                                         |
+| user_id         | bigint FK | cascade delete                          |
+| child_id        | bigint FK | nullable, null on delete                |
+| payload         | json      | input yang dikirim ke AI                |
+| status_gizi     | varchar   | nullable (severely stunted / stunted / normal / tinggi) |
+| risk_level      | varchar   | low / medium / high                     |
+| risk_score      | integer   | 0-100                                   |
+| summary         | text      | nullable                                |
+| analysis / recommendations / warning_flags | json | nullable          |
+| status          | varchar   | default `success`                       |
+| error_message   | text      | nullable                                |
+
+### `meal_plans` dan `meal_plan_items`
+
+`meal_plans`: `user_id`, `child_id` (nullable), `plan_date`, `title`, `notes`.
+`meal_plan_items`: `meal_plan_id`, `food_id`, `meal_type`, `serving_amount`, `notes`.
+
+### `notifications`
+
+`user_id`, `type` (`stunting_alert` / `analysis_done`), `title`, `message`, `is_read`.
 
 ### `waitlists`
 
@@ -186,6 +235,8 @@ RecommendationRequest ──< RecommendationResults (hasMany / belongsTo)
 RecommendationResult ──< RecommendationItems (hasMany / belongsTo)
 Food ──< RecommendationItems (hasMany / belongsTo, optional)
 User  ──< StuntingAssessments (hasMany / belongsTo)
+User  ──< MealPlans ──< MealPlanItems >── Food
+User  ──< Notifications
 User  ──< PersonalAccessTokens  (Sanctum)
 ```
 
@@ -193,86 +244,43 @@ User  ──< PersonalAccessTokens  (Sanctum)
 
 ---
 
-## Analisis Kebutuhan Tabel
+## Endpoint Utama
 
-Bagian ini merangkum tabel yang sudah ada dan tabel tambahan yang disarankan untuk kebutuhan website serta aplikasi.
+| Grup | Endpoint | Akses |
+|---|---|---|
+| Auth | `POST /api/auth/register`, `/login`; `POST /logout`, `GET /me` | publik / token |
+| Makanan | `GET /api/foods`, `/foods/{id}` | publik |
+| Waitlist | `POST /api/waitlist` | publik |
+| Analisis | `POST /api/analyze`, `GET /api/analyses`, `GET /api/children/{id}/assessments` | token |
+| Anak | `apiResource children`, `GET /api/children/{id}/growth-records` | token (milik sendiri) |
+| Notifikasi | `GET/PATCH/DELETE /api/notifications...` | token |
+| Meal plan | `/api/meal-plans` + `/items` (CRUD) | token |
+| Admin | `users`, `admin/children`, `admin/users/{id}/children`, `admin/foods`, `GET/PUT/DELETE waitlist` | token + role `admin` |
 
-### Sudah Memadai untuk MVP
+---
 
-| Tabel                    | Fungsi                                  |
-| ------------------------ | --------------------------------------- |
-| `users`                  | Akun login dan identitas dasar pengguna |
-| `children`               | Data anak milik user                    |
-| `foods`                  | Katalog makanan dan nilai gizi          |
-| `waitlists`              | Pendaftaran minat dari landing page     |
-| `personal_access_tokens` | Token autentikasi Sanctum               |
+## Integrasi AI (`POST /api/analyze`)
 
-### Prioritas Tinggi untuk Ditambahkan
+1. Validasi input (`child_id`, usia, gender, berat, tinggi, MUAC, alergi, budget, `nutrition_history`).
+2. Ambil makanan dari `foods` sesuai `age_min_months` dan budget.
+3. Simpan `recommendation_requests` (status `pending`).
+4. `AiService::analyze()` memanggil `POST {AI_SERVICE_URL}/analyze` beserta `food_candidates`.
+   Gagal → request ditandai `error`, response 502.
+5. Simpan `stunting_assessments`, `child_growth_records` (updateOrCreate per hari),
+   `recommendation_results` dan `recommendation_items`.
+6. Tambahkan `image_url` makanan dari DB ke `food_items`.
+7. Buat notifikasi (`stunting_alert` jika stunted / severely stunted, selain itu `analysis_done`).
+8. Return `{ status, message, data: <response AI> }`.
 
-| Tabel                                | Fungsi                                                                    | Dipakai oleh             |
-| ------------------------------------ | ------------------------------------------------------------------------- | ------------------------ |
-| `child_growth_records`               | Menyimpan riwayat pengukuran berat, tinggi, MUAC, dan tanggal pemeriksaan | Aplikasi + dashboard web |
-| `recommendation_requests`            | Menyimpan input profil user yang dikirim ke AI                            | Aplikasi + website       |
-| `recommendation_results`             | Menyimpan hasil rekomendasi AI, termasuk rentang harga                    | Aplikasi + website       |
-| `recommendation_items`               | Detail makanan yang direkomendasikan AI                                   | Aplikasi + website       |
-| `roles` atau kolom `role` di `users` | Membedakan admin, staf, dan user biasa                                    | Website admin + aplikasi |
+Skema input/output AI: lihat `ARCHITECTURE.md` di repo NutriGrowth AI.
 
-### Prioritas Menengah
+---
 
-| Tabel                 | Fungsi                                                      | Dipakai oleh       |
-| --------------------- | ----------------------------------------------------------- | ------------------ |
-| `user_profiles`       | Menyimpan data tambahan seperti no. HP, alamat, foto profil | Website + aplikasi |
-| `contact_messages`    | Menampung pesan dari form kontak website                    | Website            |
-| `website_contents`    | Menyimpan banner, FAQ, testimoni, dan konten landing page   | Website            |
-| `notification_tokens` | Menyimpan token push notification perangkat                 | Aplikasi           |
-| `audit_logs`          | Mencatat perubahan data oleh admin                          | Website admin      |
+## Belum Ada
 
-### Rekomendasi Relasi
-
-| Relasi                                                  | Keterangan                                                    |
-| ------------------------------------------------------- | ------------------------------------------------------------- |
-| `users` 1..n `children`                                 | Satu user dapat memiliki banyak anak                          |
-| `children` 1..n `child_growth_records`                  | Satu anak punya banyak riwayat pengukuran                     |
-| `users` 1..n `recommendation_requests`                  | Satu user bisa mengirim banyak request ke AI                  |
-| `recommendation_requests` 1..n `recommendation_results` | Satu request bisa menghasilkan satu atau beberapa versi hasil |
-| `recommendation_results` 1..n `recommendation_items`    | Satu hasil rekomendasi berisi banyak makanan                  |
-| `users` 1..n `audit_logs`                               | Satu user/admin dapat menghasilkan banyak log perubahan       |
-
-### Urutan Implementasi yang Disarankan
-
-1. Tambah `child_growth_records` supaya data pertumbuhan tidak hilang dan bisa dibuat grafik.
-2. Tambah `roles` atau `role` di `users` supaya website admin aman dan terstruktur.
-3. Tambah `recommendation_requests`, `recommendation_results`, dan `recommendation_items` karena rekomendasi makanan datang dari AI.
-4. Tambah `website_contents` dan `contact_messages` jika website akan dikelola via admin panel.
-5. Tambah `notification_tokens` dan `audit_logs` jika butuh notifikasi dan jejak aktivitas.
-
-### Bentuk Input dan Output AI
-
-AI sebaiknya menerima profil terstruktur dari user, misalnya:
-
-| Field            | Contoh                        |
-| ---------------- | ----------------------------- |
-| child_age_months | 36                            |
-| gender           | male                          |
-| weight_kg        | 12.4                          |
-| height_cm        | 92                            |
-| muac_cm          | 14.2                          |
-| allergies        | telur, susu                   |
-| budget_min       | 10000                         |
-| budget_max       | 25000                         |
-| preference       | tinggi protein, makanan lokal |
-
-Output AI yang disimpan ke database sebaiknya mencakup:
-
-| Field                  | Keterangan                           |
-| ---------------------- | ------------------------------------ |
-| recommendation_summary | Ringkasan singkat hasil AI           |
-| budget_min             | Batas bawah harga rekomendasi        |
-| budget_max             | Batas atas harga rekomendasi         |
-| confidence_note        | Catatan atau alasan rekomendasi      |
-| items                  | Daftar makanan yang direkomendasikan |
-
-Dengan pola ini, website atau aplikasi cukup mengirim profil user ke AI, lalu menyimpan hasilnya di backend untuk riwayat, tampilan ulang, dan analisis berikutnya.
+Tabel yang pernah direncanakan tetapi belum dibuat: `user_profiles`,
+`contact_messages`, `website_contents`, `notification_tokens` (push),
+`audit_logs`.
 
 ---
 
@@ -319,9 +327,11 @@ Keunggulan Supabase vs MySQL lokal:
 
 ## CORS
 
-Dikonfigurasi di `config/cors.php`. Klien yang diizinkan:
+Dikonfigurasi di `config/cors.php`. Origin yang diizinkan saat ini:
 
-- Flutter app (Android emulator: `10.0.2.2:8080`, iOS/web: `localhost:8080`)
-- React Web (`localhost:5173` saat development)
+- `http://localhost:8000` (WebClient)
+- `http://localhost:8001` (Admin)
+- `http://localhost:5173` (React/Vite)
 
-Untuk production, set `allowed_origins` ke domain spesifik.
+Aplikasi mobile native tidak terkena CORS. Untuk Flutter web atau domain
+production, tambahkan origin terkait ke `allowed_origins`.

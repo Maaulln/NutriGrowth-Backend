@@ -18,6 +18,10 @@ class Child extends Model
         'weight_kg',
         'height_cm',
         'muac_cm',
+        'allergies',
+        'exclusive_breastfeeding',
+        'supplement_intake',
+        'illness_frequency',
     ];
 
     protected $casts = [
@@ -25,6 +29,8 @@ class Child extends Model
         'weight_kg' => 'float',
         'height_cm' => 'float',
         'muac_cm' => 'float',
+        'allergies' => 'array',
+        'exclusive_breastfeeding' => 'boolean',
     ];
 
     /**

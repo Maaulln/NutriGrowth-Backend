@@ -32,7 +32,7 @@ class AnalysisController extends Controller
     {
         $validated = $request->validate([
             'child_id'          => 'required|integer',
-            'child_age_months'  => 'required|integer|min:0|max:216',
+            'child_age_months'  => 'required|integer|min:0|max:60',
             'gender'            => 'required|in:male,female',
             'weight_kg'         => 'required|numeric|min:0',
             'height_cm'         => 'required|numeric|min:0',
@@ -42,6 +42,8 @@ class AnalysisController extends Controller
             'budget_min'        => 'nullable|integer|min:0',
             'budget_max'        => 'nullable|integer|min:0',
             'nutrition_history' => 'nullable|array',
+        ], [
+            'child_age_months.max' => 'Analisis gizi WHO hanya tersedia untuk anak usia 0–60 bulan.',
         ]);
 
         $userId    = $request->user()->id;

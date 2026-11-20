@@ -42,6 +42,11 @@ class ChildController extends Controller
             'weight_kg' => 'nullable|numeric|min:0|max:100',
             'height_cm' => 'nullable|numeric|min:0|max:250',
             'muac_cm' => 'nullable|numeric|min:0|max:100',
+            'allergies' => 'nullable|array',
+            'allergies.*' => 'string|max:100',
+            'exclusive_breastfeeding' => 'sometimes|boolean',
+            'supplement_intake' => 'sometimes|in:regular,irregular,none',
+            'illness_frequency' => 'sometimes|in:low,medium,high',
         ]);
 
         $child = Auth::user()->children()->create($request->all());
@@ -100,6 +105,11 @@ class ChildController extends Controller
             'weight_kg' => 'sometimes|nullable|numeric|min:0|max:100',
             'height_cm' => 'sometimes|nullable|numeric|min:0|max:250',
             'muac_cm' => 'sometimes|nullable|numeric|min:0|max:100',
+            'allergies' => 'sometimes|nullable|array',
+            'allergies.*' => 'string|max:100',
+            'exclusive_breastfeeding' => 'sometimes|boolean',
+            'supplement_intake' => 'sometimes|in:regular,irregular,none',
+            'illness_frequency' => 'sometimes|in:low,medium,high',
         ]);
 
         $child->update($request->all());
